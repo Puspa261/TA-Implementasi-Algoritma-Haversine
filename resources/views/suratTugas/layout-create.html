@@ -1,0 +1,432 @@
+@extends('layouts.main')
+@section('content')
+
+    <style>
+        #map {
+            height: 400px;
+            width: 100%;
+        }
+    </style>
+
+    <div class="container-xxl container-p-y">
+        <div class="d-flex align-items-center py-2">
+            <a href="{{ route('surat_tugas.index') }}" class="btn btn-icon back">
+                <i class='bx bx-left-arrow-alt'></i>
+            </a>
+            <h4 class="fw-bold mx-2">Surat Tugas</h4>
+        </div>
+
+        <!-- Basic Layout -->
+        <div class="row">
+            <div class="col-xl">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Surat Tugas Baru</h5>
+                    </div>
+
+                    @if ($errors->any())
+                        <div class="alert alert-danger mx-4 mb-0">
+                            <strong>Whoops!</strong> There were some problems with your input.<br>
+                            <ul>
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    <div class="card-body">
+                        <form action="{{ route('surat_tugas.store') }}" method="POST">
+                            @csrf
+
+                            <div class="mb-3">
+                                <label class="form-label" for="basic-default-date">Tanggal
+                                    <span class="star">*</span>
+                                </label>
+                                <input class="form-control" type="date" id="basic-default-date" name="date"
+                                    required />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="basic-default-start">Jam Mulai
+                                    <span class="star">*</span>
+                                </label>
+                                <input class="form-control" type="time" value="--:--:--" id="basic-default-start"
+                                    name="started_at" required />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="basic-default-end">Jam Selesai
+                                    <span class="star">*</span>
+                                </label>
+                                <input class="form-control" type="time" value="--:--:--" id="basic-default-end"
+                                    name="finished_at" required />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="selectPimpinan" class="form-label">Pimpinan / Pengawas</label>
+                                <select id="selectPimpinan" class="form-select" name="pengawas[]" multiple="multiple"></select>
+                            </div>
+
+                            <div class="mb-2">
+                                <label for="selectPegawai" class="form-label border-pegawai">Pegawai
+                                    <span class="star">*</span>
+                                </label>
+                                <div class="border p-3">
+                                    <label class="form-label" for="name-keterangan">Keterangan</label>
+                                    <input type="text" class="form-control" id="name-keterangan" name="keterangan[]" />
+
+                                    <div class="mt-3 border p-3 keterangan">
+                                        <div class="border p-3">
+                                            <label for="selectKomandan" class="form-label">Komandan
+                                                <span class="star">*</span>
+                                            </label>
+                                            <select id="selectKomandan" class="form-select" name="name[]">
+                                                <option value="">Pilih Komandan</option>
+                                                @foreach ($user as $komandan)
+                                                    <option value="{{ $komandan['name'] }}">{{ $komandan['name'] }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+
+                                            <label for="selectJabatan" class="form-label mt-3">Jabatan Tugas
+                                                <span class="star">*</span>
+                                            </label>
+                                            <input type="text" class="form-control" id="selectJabatan" name="jabatan[]" />
+                                        </div>
+
+                                        <label for="selectWakil" class="form-label">Wakil
+                                            <span class="star">*</span>
+                                        </label>
+                                        <select id="selectWakil" class="form-select" name="wakil[]">
+                                            <option value="">Pilih Wakil</option>
+                                            @foreach ($user as $wakil)
+                                                <option value="{{ $wakil['name'] }}">{{ $wakil['name'] }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+
+                                        <label for="selectPegawai" class="form-label">Anggota
+                                            <span class="star">*</span>
+                                        </label>
+                                        <select id="selectPegawai" class="form-select select2" name="anggota[]"
+                                            multiple="multiple">
+                                        </select>
+                                    </div>
+                                    <button type="button" id="addRegu"
+                                        class="btn btn-primary btn-sm px-4 mt-2">+</button>
+                                </div>
+                            </div>
+
+                            <button type="button" id="addKeterangan" class="btn btn-primary btn-sm px-4 mb-3">+</button>
+
+                            <div class="mb-3">
+                                <label class="form-label" for="name-location">Lokasi</label>
+                                <input type="text" class="form-control" id="name-location" readonly
+                                    name="location" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="latitude">Latitude</label>
+                                <input type="text" class="form-control" id="latitude" readonly name="latitude" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="longitude">Longitude</label>
+                                <input type="text" class="form-control" id="longitude" readonly name="longitude" />
+                            </div>
+                            <div class="mb-3" id="search-container">
+                                <label class="form-label" for="search-input">Cari Lokasi</label>
+                                <div class="d-flex">
+                                    <input type="text" class="form-control" id="search-input"
+                                        placeholder="Cari Nama Lokasi......">
+                                    <button id="search-btn" class="btn btn-primary ms-2">Search</button>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div id="map"></div>
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <a type="button" class="btn btn-primary px-4"
+                                    href="{{ route('surat_tugas.index') }}">Back</a>
+                                <button type="submit" class="btn btn-primary px-4">Submit</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        $(document).ready(function() {
+
+            // Select Pegawai
+            $("#selectPegawai").select2({
+                placeholder: 'Pilih Anggota',
+                ajax: {
+                    url: "{{ route('surat_tugas.pegawai') }}",
+                    processResults: function({
+                        data
+                    }) {
+                        return {
+                            results: $.map(data, function(item) {
+                                return {
+                                    id: item.name,
+                                    text: item.name
+                                }
+                            })
+                        }
+                    }
+                }
+            })
+
+            // Select Pimpinan
+            $("#selectPimpinan").select2({
+                placeholder: 'Pilih Pimpinan / Pengawas',
+                ajax: {
+                    url: "{{ route('surat_tugas.pegawai') }}",
+                    processResults: function({
+                        data
+                    }) {
+                        return {
+                            results: $.map(data, function(item) {
+                                return {
+                                    id: item.name,
+                                    text: item.name
+                                }
+                            })
+                        }
+                    }
+                }
+            })
+
+            // Map
+            var mymap = null;
+            var marker = null;
+            var searchControl = null;
+
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    mymap = L.map('map').setView([position.coords.latitude, position.coords.longitude], 13);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    }).addTo(mymap);
+
+                    marker = L.marker([position.coords.latitude, position.coords.longitude]).addTo(mymap)
+                        .bindPopup('Your current location.')
+                        .openPopup();
+
+                    searchControl = new L.Control.Search({
+                        position: 'topright',
+                        layer: L.geoJSON(),
+                        propertyName: 'name',
+                        textPlaceholder: 'Search location...',
+                        initial: false,
+                    });
+
+                    mymap.addControl(searchControl);
+
+                    mymap.on('click', function(e) {
+                        if (marker !== null) {
+                            mymap.removeLayer(marker);
+                        }
+
+                        var longitude = e.latlng.lng;
+                        var latitude = e.latlng.lat;
+
+                        $("#longitude").val(longitude);
+                        $("#latitude").val(latitude);
+
+                        marker = L.marker([latitude, longitude]).addTo(mymap)
+                            .bindPopup('Clicked location')
+                            .openPopup();
+
+                        $.getJSON('https://nominatim.openstreetmap.org/reverse?format=json&lat=' +
+                            latitude + '&lon=' + longitude,
+                            function(data) {
+                                $("#name-location").val(data.display_name);
+                            });
+                    });
+
+                    // Search functionality
+                    $("#search-btn").click(function(e) {
+                        e.preventDefault();
+                        var query = $("#search-input").val();
+                        if (query.trim() !== "") {
+                            searchLocation(query);
+                        }
+                    });
+
+                    // Search Location
+                    function searchLocation(query) {
+                        $.getJSON('https://nominatim.openstreetmap.org/search?format=json&q=' +
+                            encodeURIComponent(query),
+                            function(data) {
+                                if (data && data.length > 0) {
+                                    var result = data[0];
+                                    var latitude = parseFloat(result.lat);
+                                    var longitude = parseFloat(result.lon);
+
+                                    mymap.setView([latitude, longitude], 13);
+
+                                    $("#name-location").val(result.display_name);
+                                    $("#latitude").val(latitude);
+                                    $("#longitude").val(longitude);
+
+                                    if (marker !== null) {
+                                        mymap.removeLayer(marker);
+                                    }
+                                    marker = L.marker([latitude, longitude]).addTo(mymap)
+                                        .bindPopup('Searched location')
+                                        .openPopup();
+                                } else {
+                                    alert("Location not found.");
+                                }
+                            });
+                    }
+                });
+            } else {
+                alert("Geolocation is not supported by your browser.");
+            }
+        })
+    </script>
+
+    {{-- Tambah Regu --}}
+    <script>
+        $(document).ready(function() {
+            // var id_keterangan = 1;
+            $('#addRegu').click(function() {
+                var regu =
+                    '<div class="addedRegu mt-3 border p-3">' +
+                    '<div class="border p-3">' +
+
+                    '<label for="selectKomandan" class="form-label">Komandan <span class="star">*</span></label>' +
+                    '<select id="selectKomandan" class="form-select" name="name[]">' +
+                    '<option value="">Pilih Komandan</option>' +
+                    '@foreach ($user as $komandan)' +
+                    '<option value="{{ $komandan['name'] }}">{{ $komandan['name'] }}' +
+                    '</option>' +
+                    '@endforeach' +
+                    '</select>' +
+
+                    '<label for="selectJabatan" class="form-label mt-3">Jabatan Tugas<span class="star">*</span></label>' +
+                    '<input type="text" class="form-control" id="selectJabatan" name="jabatan[]" />' +
+
+                    '</div>' +
+
+                    '<label for="selectWakil" class="form-label">Wakil<span class="star">*</span></label>' +
+                    '<select id="selectWakil" class="form-select" name="wakil[]">' +
+                    '<option value="">Pilih Wakil</option>' +
+                    '@foreach ($user as $wakil)' +
+                    '<option value="{{ $wakil['name'] }}">{{ $wakil['name'] }}' +
+                    '</option>' +
+                    '@endforeach' +
+                    '</select>' +
+
+                    '<label for="selectAnggota" class="form-label">Anggota<span class="star">*</span></label>' +
+                    '<select id="selectAnggota" class="form-select select2" name="anggota[]" multiple="multiple"></select>' +
+
+                    '<button type="button" class="btn btn-danger btn-sm px-4 mt-2 removeRegu">-</button>' +
+                    '</div>';
+                $(regu).insertAfter('.keterangan');
+
+                $('.select2').select2({
+                    placeholder: 'Pilih Anggota',
+                    ajax: {
+                        url: "{{ route('surat_tugas.pegawai') }}",
+                        processResults: function({
+                            data
+                        }) {
+                            return {
+                                results: $.map(data, function(item) {
+                                    return {
+                                        id: item.name,
+                                        text: item.name
+                                    }
+                                })
+                            };
+                        }
+                    }
+                });
+                // id_keterangan += 1;
+                // console.log(id_keterangan);
+            });
+            $(document).on('click', '.removeRegu', function() {
+                $(this).closest('.addedRegu').remove();
+            });
+        });
+    </script>
+
+    {{-- Tambah Pegawai --}}
+    <script>
+        $(document).ready(function() {
+            // var id_keterangan = 1;
+            $('#addKeterangan').click(function() {
+                var keterangan =
+                    '<div class="addedKeterangan border p-3 mb-3">' +
+
+                    '<label class="form-label" for="name-keterangan">Keterangan</label>' +
+                    '<input type="text" class="form-control" id="name-keterangan" name="keterangan[]" />' +
+
+                    '<div class="addedRegu mt-3 border p-3">' +
+                    '<div class="border p-3">' +
+
+                    '<label for="selectKomandan" class="form-label">Komandan <span class="star">*</span></label>' +
+                    '<select id="selectKomandan" class="form-select" name="name[]">' +
+                    '<option value="">Pilih Komandan</option>' +
+                    '@foreach ($user as $komandan)' +
+                    '<option value="{{ $komandan['name'] }}">{{ $komandan['name'] }}' +
+                    '</option>' +
+                    '@endforeach' +
+                    '</select>' +
+
+                    '<label for="selectJabatan" class="form-label mt-3">Jabatan Tugas<span class="star">*</span></label>' +
+                    '<input type="text" class="form-control" id="selectJabatan" name="jabatan[]" />' +
+
+                    '</div>' +
+
+                    '<label for="selectWakil" class="form-label">Wakil<span class="star">*</span></label>' +
+                    '<select id="selectWakil" class="form-select" name="wakil[]">' +
+                    '<option value="">Pilih Wakil</option>' +
+                    '@foreach ($user as $wakil)' +
+                    '<option value="{{ $wakil['name'] }}">{{ $wakil['name'] }}' +
+                    '</option>' +
+                    '@endforeach' +
+                    '</select>' +
+
+                    '<label for="selectAnggota" class="form-label">Anggota<span class="star">*</span></label>' +
+                    '<select id="selectAnggota" class="form-select multiple-select" name="anggota[]" multiple="multiple"></select>' +
+
+                    '<button type="button" class="btn btn-danger btn-sm px-4 mt-2 removeRegu">-</button>' +
+                    '</div>'
+
+                    '<button type="button" class="btn btn-danger btn-sm px-4 mt-2 removeKeterangan">-</button>' +
+                    '</div>';
+                $(keterangan).insertAfter('.border-pegawai');
+
+                $('.multiple-select').select2({
+                    placeholder: 'Pilih Pegawai',
+                    ajax: {
+                        url: "{{ route('surat_tugas.pegawai') }}",
+                        processResults: function({
+                            data
+                        }) {
+                            return {
+                                results: $.map(data, function(item) {
+                                    return {
+                                        id: item.name,
+                                        text: item.name
+                                    }
+                                })
+                            };
+                        }
+                    }
+                });
+                // id_keterangan += 1;
+                // console.log(id_keterangan);
+            });
+            $(document).on('click', '.removeKeterangan', function() {
+                $(this).closest('.addedKeterangan').remove();
+            });
+        });
+    </script>
+@endsection
